@@ -5,6 +5,9 @@ pipeline {
             args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
+    environment {
+        PATH = "/usr/local/bin:/opt/homebrew/Cellar/maven/3.9.9/libexec/bin:$PATH"
+    }
     stages {
         stage('Checkout') {
             steps {
