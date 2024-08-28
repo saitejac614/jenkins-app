@@ -6,7 +6,6 @@ pipeline {
         }
     }
     environment {
-        // Explicitly setting PATH as confirmed working
         PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
     }
     stages {
@@ -57,4 +56,23 @@ pipeline {
                     withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
                         sh '''
                             echo "Updating deployment file"
-                            sed -i '' 's​⬤
+                            sed -i '' 's|replaceImageTag|${BUILD_NUMBER}|g' java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                            git config user.email "testpen008@gmail.com"
+                            git config user.name "DheXavier"
+                            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                            git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                        '''
+                    }
+                }
+            }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    sh 'kubectl apply -f java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml'
+                }
+            }
+        }
+    }
+}
