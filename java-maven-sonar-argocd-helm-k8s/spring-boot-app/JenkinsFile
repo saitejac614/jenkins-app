@@ -6,6 +6,8 @@ pipeline {
         }
     }
     environment {
+        // Explicitly setting the shell path and correcting PATH
+        SHELL = "/bin/bash"
         PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
     }
     stages {
@@ -16,10 +18,7 @@ pipeline {
         }
         stage('Build and Test') {
             steps {
-                sh '''
-                    echo "Current PATH: $PATH"
-                    mvn clean package
-                '''
+                sh '/bin/bash -c "echo Current PATH: $PATH && mvn clean package"'
             }
         }
         stage('Static Code Analysis') {
@@ -28,10 +27,7 @@ pipeline {
             }
             steps {
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_AUTH_TOKEN')]) {
-                    sh '''
-                        echo "Running SonarQube analysis"
-                        mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}
-                    '''
+                    sh '/bin/bash -c "echo Running SonarQube analysis && mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}"'
                 }
             }
         }
@@ -42,11 +38,7 @@ pipeline {
             }
             steps {
                 script {
-                    sh '''
-                        echo "Building Docker image"
-                        docker build -t ${DOCKER_IMAGE} .
-                        docker push ${DOCKER_IMAGE}
-                    '''
+                    sh '/bin/bash -c "echo Building Docker image && docker build -t ${DOCKER_IMAGE} . && docker push ${DOCKER_IMAGE}"'
                 }
             }
         }
@@ -54,15 +46,7 @@ pipeline {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
-                        sh '''
-                            echo "Updating deployment file"
-                            sed -i '' 's|replaceImageTag|${BUILD_NUMBER}|g' java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                            git config user.email "testpen008@gmail.com"
-                            git config user.name "DheXavier"
-                            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                            git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-                        '''
+                        sh '/bin/bash -c "echo Updating deployment file && sed -i \'\' \'s|replaceImageTag|${BUILD_NUMBER}|g\' java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml && git config user.email \'testpen008@gmail.com\' && git config user.name \'DheXavier\' && git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml && git commit -m \'Update deployment image to version ${BUILD_NUMBER}\' && git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main"'
                     }
                 }
             }
@@ -70,7 +54,7 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    sh 'kubectl apply -f java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml'
+                    sh '/bin/bash -c "kubectl apply -f java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"'
                 }
             }
         }
