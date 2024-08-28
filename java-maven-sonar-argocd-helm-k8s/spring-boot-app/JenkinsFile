@@ -57,7 +57,4 @@ pipeline {
                     withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
                         sh '''
                             echo "Updating deployment file"
-                            sed -i '' 's|replaceImageTag|${BUILD_NUMBER}|g' java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                            git config user.email "testpen008@gmail.com"
-                            git config user.name "DheXavier"
-                            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manif​⬤
+                            sed -i '' 's​⬤
