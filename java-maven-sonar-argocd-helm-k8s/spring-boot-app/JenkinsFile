@@ -1,13 +1,13 @@
 pipeline {
     agent {
         docker {
-            image 'maven:latest' // Ensure this is the correct and accessible Docker image
-            args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint /bin/bash' // Set bash as entrypoint
+            image 'maven:latest' // Use the Docker image
+            args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""' // Remove entrypoint to use the default command
         }
     }
     environment {
         SHELL = "/bin/bash" // Explicitly setting the shell path
-        PATH = "/bin:/usr/bin:/usr/local/bin:$PATH" // Ensure correct PATH settings
+        PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
     }
     stages {
         stage('Checkout') {
