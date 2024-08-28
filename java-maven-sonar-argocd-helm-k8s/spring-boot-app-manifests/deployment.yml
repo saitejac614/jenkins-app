@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
       - name: spring-boot-app
-        image: abhishekf5/ultimate-cicd:replaceImageTag
+        image: dhexavier1/jenkins-app:replaceImageTag  # This tag will be replaced by Jenkins with the build number
         ports:
         - containerPort: 8080
