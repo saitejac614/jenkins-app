@@ -1,12 +1,13 @@
 pipeline {
     agent {
         docker {
-            image 'maven:latest'  // Use the image you've confirmed to be available
+            image 'maven:latest'  // Use the confirmed working image
             args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
     environment {
-        PATH = "/bin:/usr/bin:/usr/local/bin:/opt/homebrew/Cellar/maven/3.9.9/libexec/bin:$PATH"
+        // Explicitly setting PATH as confirmed working
+        PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
     }
     stages {
         stage('Checkout') {
@@ -59,20 +60,4 @@ pipeline {
                             sed -i '' 's|replaceImageTag|${BUILD_NUMBER}|g' java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                             git config user.email "testpen008@gmail.com"
                             git config user.name "DheXavier"
-                            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                            git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-                        '''
-                    }
-                }
-            }
-        }
-        stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    sh 'kubectl apply -f java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml'
-                }
-            }
-        }
-    }
-}
+                            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manif​⬤
