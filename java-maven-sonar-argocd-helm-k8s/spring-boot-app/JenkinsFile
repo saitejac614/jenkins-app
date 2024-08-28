@@ -1,26 +1,26 @@
 pipeline {
     agent {
         docker {
-            image 'maven:latest'  // Confirmed working image
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
+            image 'maven:latest' // Ensure this is the correct and accessible Docker image
+            args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint /bin/bash' // Set bash as entrypoint
         }
     }
     environment {
-        // Explicitly set the shell and correct PATH
-        SHELL = "/bin/bash"
-        PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
+        SHELL = "/bin/bash" // Explicitly setting the shell path
+        PATH = "/bin:/usr/bin:/usr/local/bin:$PATH" // Ensure correct PATH settings
     }
     stages {
         stage('Checkout') {
             steps {
-                // Ensure Git is correctly accessible; if necessary, specify credentials
                 git branch: 'main', url: 'https://github.com/dhexavier/jenkins-app.git'
             }
         }
         stage('Build and Test') {
             steps {
-                // Force using /bin/bash explicitly to avoid PATH issues
-                sh '/bin/bash -c "echo Current PATH: $PATH && mvn clean package"'
+                sh '''
+                    echo "Current PATH: $PATH"
+                    mvn clean package
+                '''
             }
         }
         stage('Static Code Analysis') {
@@ -29,8 +29,10 @@ pipeline {
             }
             steps {
                 withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_AUTH_TOKEN')]) {
-                    // Use /bin/bash explicitly for SonarQube analysis
-                    sh '/bin/bash -c "echo Running SonarQube analysis && mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}"'
+                    sh '''
+                        echo "Running SonarQube analysis"
+                        mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}
+                    '''
                 }
             }
         }
@@ -41,8 +43,11 @@ pipeline {
             }
             steps {
                 script {
-                    // Build and push the Docker image using /bin/bash
-                    sh '/bin/bash -c "echo Building Docker image && docker build -t ${DOCKER_IMAGE} . && docker push ${DOCKER_IMAGE}"'
+                    sh '''
+                        echo "Building Docker image"
+                        docker build -t ${DOCKER_IMAGE} .
+                        docker push ${DOCKER_IMAGE}
+                    '''
                 }
             }
         }
@@ -50,18 +55,22 @@ pipeline {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
-                        // Update deployment using /bin/bash
-                        sh '/bin/bash -c "echo Updating deployment file && sed -i \'\' \'s|replaceImageTag|${BUILD_NUMBER}|g\' java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml && git config user.email \'testpen008@gmail.com\' && git config user.name \'DheXavier\' && git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml && git commit -m \'Update deployment image to version ${BUILD_NUMBER}\' && git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main"'
+                        sh '''
+                            echo "Updating deployment file"
+                            sed -i '' 's|replaceImageTag|${BUILD_NUMBER}|g' java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                            git config user.email "testpen008@gmail.com"
+                            git config user.name "DheXavier"
+                            git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                            git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                            git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
+                        '''
                     }
                 }
             }
         }
         stage('Deploy to Kubernetes') {
             steps {
-                script {
-                    // Deploy to Kubernetes using /bin/bash
-                    sh '/bin/bash -c "kubectl apply -f java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"'
-                }
+                sh 'kubectl apply -f java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml'
             }
         }
     }
