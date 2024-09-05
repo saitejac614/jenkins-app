@@ -1,14 +1,13 @@
 pipeline {
     agent any
     environment {
-        SHELL = "/bin/bash"  // Use bash shell explicitly
-        PATH = "/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:/opt/homebrew/Cellar/maven/3.9.9/libexec/bin:$PATH"  // Explicitly set PATH to include Maven and Docker paths
-        JAVA_HOME = "/opt/homebrew/Cellar/openjdk/22.0.2/libexec/openjdk.jdk/Contents/Home"  // Correct JAVA_HOME based on the provided path
+        PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
+        JAVA_HOME = "/opt/homebrew/Cellar/openjdk/22.0.2/libexec/openjdk.jdk/Contents/Home"
     }
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/dhexavier/jenkins-app.git'
+                checkout scm
             }
         }
         stage('Test Shell Command') {
@@ -18,44 +17,41 @@ pipeline {
         }
         stage('Build and Test') {
             steps {
-                dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') { // Navigate to the application directory
-                    sh '''
-                        echo "Current PATH: $PATH"
-                        echo "JAVA_HOME is set to: $JAVA_HOME"
-                        mvn -Dmaven.repo.local=${WORKSPACE}/.m2/repository clean package
-                    '''
+                dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
+                    sh 'echo "Current PATH: $PATH"'
+                    sh 'echo "JAVA_HOME is set to: $JAVA_HOME"'
+                    sh 'mvn -Dmaven.repo.local=$WORKSPACE/.m2/repository clean package'
                 }
             }
         }
         stage('Test Docker') {
             steps {
                 script {
-                    // Test Docker with a simple hello-world container
                     sh 'docker run hello-world'
                 }
             }
         }
         stage('Build and Push Docker Image') {
-            environment {
-                DOCKER_IMAGE = "dhexavier1/jenkins-app:${BUILD_NUMBER}"
-                REGISTRY_CREDENTIALS = credentials('dockerhub-cred')
-            }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                    sh '''
-                        echo "Logging into Docker Hub..."
-                        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-                        echo "Building Docker image..."
-                        docker build -t ${DOCKER_IMAGE} .
-                        docker push ${DOCKER_IMAGE}
-                    '''
+                    script {
+                        dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {  // Ensure correct directory
+                            sh '''
+                                echo "Logging into Docker Hub..."
+                                echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                                echo "Building Docker image..."
+                                docker build -t $DOCKER_USERNAME/jenkins-app:23 .
+                                docker push $DOCKER_USERNAME/jenkins-app:23
+                            '''
+                        }
+                    }
                 }
             }
         }
     }
     post {
-        success {
-            echo 'Pipeline completed successfully!'
+        always {
+            echo 'Pipeline finished. Check logs for details.'
         }
         failure {
             echo 'Pipeline failed. Please check the logs for more details.'
