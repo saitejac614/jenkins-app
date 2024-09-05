@@ -17,16 +17,18 @@ pipeline {
         }
         stage('Build and Test') {
             steps {
-                sh '''
-                    echo "Current PATH: $PATH"
-                    echo "JAVA_HOME before update: $JAVA_HOME"
-                    JAVA_BIN=$(which java)
-                    export JAVA_HOME=$(dirname $(dirname $(readlink -f $JAVA_BIN)))
-                    echo "JAVA_HOME after update: $JAVA_HOME"
-                    
-                    # Use a local Maven repository in the workspace
-                    mvn -Dmaven.repo.local=$WORKSPACE/.m2/repository clean package
-                '''
+                dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') { // Navigate to the directory with pom.xml
+                    sh '''
+                        echo "Current PATH: $PATH"
+                        echo "JAVA_HOME before update: $JAVA_HOME"
+                        JAVA_BIN=$(which java)
+                        export JAVA_HOME=$(dirname $(dirname $(readlink -f $JAVA_BIN)))
+                        echo "JAVA_HOME after update: $JAVA_HOME"
+                        
+                        # Use a local Maven repository in the workspace
+                        mvn -Dmaven.repo.local=$WORKSPACE/.m2/repository clean package
+                    '''
+                }
             }
         }
         stage('Build and Push Docker Image') {
