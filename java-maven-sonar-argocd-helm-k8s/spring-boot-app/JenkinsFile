@@ -1,48 +1,55 @@
 pipeline {
     agent {
         docker {
-            image 'maven:latest' // Use the Docker image
-            args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""' // Remove entrypoint to use the default command
+            image 'maven:latest' // Use the Maven Docker image
+            args '-v /var/run/docker.sock:/var/run/docker.sock --entrypoint=""' // Allow Docker commands to be run inside the container
         }
     }
     environment {
-        SHELL = "/bin/bash" // Explicitly setting the shell path
-        PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
+        SHELL = "/bin/bash" // Ensure the shell used is bash
+        JAVA_HOME = "/opt/java/openjdk" // Update JAVA_HOME path dynamically
+        PATH = "/opt/java/openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     }
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/dhexavier/jenkins-app.git'
+                // Checkout the repository
+                git branch: 'main', url: 'https://github.com/dhexavier/jenkins-app.git', credentialsId: 'github-cred'
             }
         }
         stage('Build and Test') {
             steps {
-                dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') { // Navigate to the directory with pom.xml
-                    sh '''
-                        echo "Current PATH: $PATH"
-                        echo "JAVA_HOME before update: $JAVA_HOME"
-                        JAVA_BIN=$(which java)
-                        export JAVA_HOME=$(dirname $(dirname $(readlink -f $JAVA_BIN)))
-                        echo "JAVA_HOME after update: $JAVA_HOME"
-                        
-                        # Use a local Maven repository in the workspace
-                        mvn -Dmaven.repo.local=$WORKSPACE/.m2/repository clean package
-                    '''
+                dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') { // Navigate to the application directory
+                    script {
+                        sh '''
+                            echo "Current PATH: $PATH"
+                            echo "JAVA_HOME before update: $JAVA_HOME"
+                            JAVA_BIN=$(which java)
+                            JAVA_HOME=$(dirname $(dirname $(readlink -f $JAVA_BIN)))
+                            export JAVA_HOME
+                            echo "JAVA_HOME after update: $JAVA_HOME"
+                            mvn -Dmaven.repo.local=${WORKSPACE}/.m2/repository clean package
+                        '''
+                    }
                 }
             }
         }
         stage('Build and Push Docker Image') {
             environment {
                 DOCKER_IMAGE = "dhexavier1/jenkins-app:${BUILD_NUMBER}"
-                REGISTRY_CREDENTIALS = credentials('docker-cred')
+                REGISTRY_CREDENTIALS = credentials('dockerhub-cred')
             }
             steps {
                 script {
-                    sh '''
-                        echo "Building Docker image"
-                        docker build -t ${DOCKER_IMAGE} .
-                        docker push ${DOCKER_IMAGE}
-                    '''
+                    dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
+                        sh '''
+                            echo "Building Docker image..."
+                            docker build -t ${DOCKER_IMAGE} .
+                            echo "Pushing Docker image to Docker Hub..."
+                            echo ${REGISTRY_CREDENTIALS_PSW} | docker login -u ${REGISTRY_CREDENTIALS_USR} --password-stdin
+                            docker push ${DOCKER_IMAGE}
+                        '''
+                    }
                 }
             }
         }
@@ -51,7 +58,7 @@ pipeline {
                 script {
                     withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
                         sh '''
-                            echo "Updating deployment file"
+                            echo "Updating deployment file..."
                             sed -i '' 's|replaceImageTag|${BUILD_NUMBER}|g' java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                             git config user.email "testpen008@gmail.com"
                             git config user.name "DheXavier"
@@ -62,6 +69,22 @@ pipeline {
                     }
                 }
             }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    // Assuming `kubectl` is set up locally and authenticated with the cluster
+                    sh 'kubectl apply -f java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml'
+                }
+            }
+        }
+    }
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Please check the logs for more details.'
         }
     }
 }
