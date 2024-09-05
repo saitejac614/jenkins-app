@@ -35,7 +35,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                     script {
-                        dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {  // Ensure correct directory
+                        dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
                             sh '''
                                 echo "Logging into Docker Hub..."
                                 echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
