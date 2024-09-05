@@ -17,6 +17,20 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/dhexavier/jenkins-app.git', credentialsId: 'github-cred'
             }
         }
+        stage('Environment Check') {
+            steps {
+                script {
+                    // Check essential commands and environment variables
+                    sh '''
+                        echo "Current PATH: $PATH"
+                        echo "Current SHELL: $SHELL"
+                        which docker || echo "Docker not found!"
+                        which mvn || echo "Maven not found!"
+                        echo "JAVA_HOME is set to: $JAVA_HOME"
+                    '''
+                }
+            }
+        }
         stage('Build and Test') {
             steps {
                 dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') { // Navigate to the application directory
