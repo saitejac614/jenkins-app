@@ -8,7 +8,6 @@ pipeline {
     environment {
         SHELL = "/bin/bash" // Explicitly setting the shell path
         PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
-        JAVA_HOME = "/usr/lib/jvm/java-21-openjdk" // Update to Java 21's path
     }
     stages {
         stage('Checkout') {
@@ -21,10 +20,12 @@ pipeline {
                 sh '''
                     echo "Current PATH: $PATH"
                     echo "JAVA_HOME before update: $JAVA_HOME"
-                    # Explicitly set JAVA_HOME inside Docker
-                    export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+                    JAVA_BIN=$(which java)
+                    export JAVA_HOME=$(dirname $(dirname $(readlink -f $JAVA_BIN)))
                     echo "JAVA_HOME after update: $JAVA_HOME"
-                    mvn clean package
+                    
+                    # Use a local Maven repository in the workspace
+                    mvn -Dmaven.repo.local=$WORKSPACE/.m2/repository clean package
                 '''
             }
         }
