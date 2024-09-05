@@ -20,7 +20,10 @@ pipeline {
             steps {
                 sh '''
                     echo "Current PATH: $PATH"
-                    echo "JAVA_HOME: $JAVA_HOME"
+                    echo "JAVA_HOME before update: $JAVA_HOME"
+                    # Explicitly set JAVA_HOME inside Docker
+                    export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+                    echo "JAVA_HOME after update: $JAVA_HOME"
                     mvn clean package
                 '''
             }
