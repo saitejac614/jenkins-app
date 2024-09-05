@@ -8,7 +8,7 @@ pipeline {
     environment {
         SHELL = "/bin/bash" // Ensure the shell used is bash
         JAVA_HOME = "/opt/java/openjdk" // Update JAVA_HOME path dynamically
-        PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/opt/java/openjdk/bin" // Set explicit PATH including Homebrew and Docker paths
+        PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/opt/java/openjdk/bin:/usr/local/bin" // Set explicit PATH including Homebrew and Docker paths
     }
     stages {
         stage('Checkout') {
