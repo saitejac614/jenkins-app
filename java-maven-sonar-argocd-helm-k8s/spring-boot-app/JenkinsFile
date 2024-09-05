@@ -1,9 +1,9 @@
 pipeline {
     agent any
     environment {
-        SHELL = "/bin/bash"  // Ensure we are using Bash
-        PATH = "/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:$PATH"  // Explicitly set PATH to include Docker and other essential paths
-        JAVA_HOME = "/opt/java/openjdk"  // Set JAVA_HOME path dynamically
+        SHELL = "/bin/bash"  // Use bash shell explicitly
+        PATH = "/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:/opt/homebrew/Cellar/maven/3.9.9/libexec/bin:$PATH"  // Explicitly set PATH to include Maven and Docker paths
+        JAVA_HOME = "/opt/homebrew/Cellar/openjdk/22.0.2/libexec/openjdk.jdk/Contents/Home"  // Correct JAVA_HOME based on the provided path
     }
     stages {
         stage('Checkout') {
@@ -21,6 +21,7 @@ pipeline {
                 dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') { // Navigate to the application directory
                     sh '''
                         echo "Current PATH: $PATH"
+                        echo "JAVA_HOME is set to: $JAVA_HOME"
                         mvn -Dmaven.repo.local=${WORKSPACE}/.m2/repository clean package
                     '''
                 }
