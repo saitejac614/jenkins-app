@@ -1,28 +1,23 @@
 # Use an official Maven image as a parent image
-FROM maven:3.9.9-openjdk-11-slim AS build
+FROM maven:3.9.9-eclipse-temurin-11 AS build
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the pom.xml file and download the dependencies
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+# Copy the current directory contents into the container at /app
+COPY . /app
 
-# Copy the entire project and build the application
-COPY . .
-RUN mvn clean package -DskipTests
+# Build the Maven project
+RUN mvn clean package
 
-# Use an official OpenJDK runtime as a parent image
+# Use an official OpenJDK image as a parent image for the runtime environment
 FROM openjdk:11-jre-slim
 
-# Set the working directory in the container
-WORKDIR /app
-
-# Copy the JAR file from the build stage
+# Copy the built jar file from the build stage
 COPY --from=build /app/target/spring-boot-web.jar /app/spring-boot-web.jar
 
-# Make port 8080 available to the world outside this container
+# Expose the port the app runs on
 EXPOSE 8080
 
-# Run the JAR file
-ENTRYPOINT ["java", "-jar", "spring-boot-web.jar"]
+# Run the jar file
+ENTRYPOINT ["java", "-jar", "/app/spring-boot-web.jar"]
