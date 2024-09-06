@@ -39,14 +39,16 @@ pipeline {
         }
         stage('Build and Push Docker Image') {
             steps {
-                withCredentials([string(credentialsId: 'dockerhub-cred', variable: 'DOCKERHUB-CRED')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                     script {
                         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-                            sh 'echo "Logging into Docker Hub..."'
-                            sh 'echo "$DOCKER_PASSWORD" | docker login -u dhexavier1 --password-stdin'
-                            sh 'echo "Building Docker image..."'
-                            sh 'docker build -t dhexavier1/jenkins-app:23 .'
-                            sh 'docker push dhexavier1/jenkins-app:23'
+                            sh '''
+                                echo "Logging into Docker Hub..."
+                                echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                                echo "Building Docker image..."
+                                docker build -t $DOCKER_USERNAME/jenkins-app:23 .
+                                docker push $DOCKER_USERNAME/jenkins-app:23
+                            '''
                         }
                     }
                 }
