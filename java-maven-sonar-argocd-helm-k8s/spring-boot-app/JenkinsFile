@@ -2,9 +2,7 @@ pipeline {
     agent any
     environment {
         PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
-        SHELL = "/bin/bash"
-        JAVA_HOME = "/opt/homebrew/Cellar/openjdk/22.0.2/libexec/openjdk.jdk/Contents/Home"  // Set Java home as per your system
-        DOCKER_IMAGE_TAG = "25"  // Change this tag to a new value for each build
+        JAVA_HOME = "/opt/homebrew/Cellar/openjdk/22.0.2/libexec/openjdk.jdk/Contents/Home"
     }
     stages {
         stage('Test Shell Command') {
@@ -17,15 +15,17 @@ pipeline {
                 dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
                     sh 'echo "Current PATH: $PATH"'
                     sh 'echo "JAVA_HOME is set to: $JAVA_HOME"'
-                    sh 'mvn -Dmaven.repo.local=$WORKSPACE/.m2/repository clean package'
+                    sh 'mvn -Dmaven.repo.local=${WORKSPACE}/.m2/repository clean package'
                 }
             }
         }
         stage('Run SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {  // Ensure 'SonarQube' matches the SonarQube server configuration name in Jenkins
-                    dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-                        sh 'mvn sonar:sonar'
+                withSonarQubeEnv('SonarQube') {
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                        dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
+                            sh 'mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN'
+                        }
                     }
                 }
             }
@@ -39,14 +39,14 @@ pipeline {
         }
         stage('Build and Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                withCredentials([string(credentialsId: 'docker-password', variable: 'DOCKER_PASSWORD')]) {
                     script {
                         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
                             sh 'echo "Logging into Docker Hub..."'
-                            sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                            sh 'echo "$DOCKER_PASSWORD" | docker login -u dhexavier1 --password-stdin'
                             sh 'echo "Building Docker image..."'
-                            sh "docker build -t $DOCKER_USERNAME/jenkins-app:${DOCKER_IMAGE_TAG} ."  // Build the Docker image with the new tag
-                            sh "docker push $DOCKER_USERNAME/jenkins-app:${DOCKER_IMAGE_TAG}"  // Push the Docker image to Docker Hub
+                            sh 'docker build -t dhexavier1/jenkins-app:23 .'
+                            sh 'docker push dhexavier1/jenkins-app:23'
                         }
                     }
                 }
@@ -54,22 +54,9 @@ pipeline {
         }
         stage('Update Image Tag in Deployment File') {
             steps {
-                script {
-                    dir('k8s') {  // Ensure your deployment YAML file is in the 'k8s' directory
-                        sh """
-                        sed -i '' 's|image: .*|image: $DOCKER_USERNAME/jenkins-app:${DOCKER_IMAGE_TAG}|' deployment.yaml
-                        """
-                        sh 'cat deployment.yaml'  // Display the updated deployment file for confirmation
-                    }
-                }
-            }
-        }
-        stage('Deploy to Argo CD') {
-            steps {
-                script {
-                    dir('k8s') {  // Ensure your Argo CD application YAML file is in the 'k8s' directory
-                        sh 'kubectl apply -f argocd-application.yaml'  // Update Argo CD application with the new image tag
-                    }
+                dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
+                    sh 'sed -i "" "s|image: .*|image: dhexavier1/jenkins-app:23|g" deployment.yaml'
+                    sh 'cat deployment.yaml' // Just to verify changes
                 }
             }
         }
@@ -77,6 +64,9 @@ pipeline {
     post {
         always {
             echo 'Pipeline finished. Check logs for details.'
+        }
+        failure {
+            echo 'Pipeline failed. Please check the logs for more details.'
         }
     }
 }
