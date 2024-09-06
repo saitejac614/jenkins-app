@@ -59,12 +59,13 @@ pipeline {
                 GIT_REPO_NAME = "jenkins-app"
                 GIT_USER_NAME = "dhexavier"
             }
-    steps {
+   steps {
         withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
             sh '''
                 git config user.email "testpen008@gmail.com"
                 git config user.name "Dhe Xavier"
                 git checkout main  # Ensure you are on the main branch
+                git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main  # Pull the latest changes
                 BUILD_NUMBER=${BUILD_NUMBER}
                 sed -i '' "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                 git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
