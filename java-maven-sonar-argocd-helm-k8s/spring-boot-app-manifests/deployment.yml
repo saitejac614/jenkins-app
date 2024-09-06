@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spring-boot-app
+  namespace: default
   labels:
     app: spring-boot-app
 spec:
@@ -16,6 +17,6 @@ spec:
     spec:
       containers:
       - name: spring-boot-app
-        image: dhexavier1/jenkins-app:34  # This tag will be replaced by Jenkins with the build number
+        image: dhexavier1/jenkins-app:34  # Replaced by Jenkins with the build number
         ports:
         - containerPort: 8080
