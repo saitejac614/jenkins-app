@@ -2,14 +2,11 @@ pipeline {
     agent any
     environment {
         PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
-        JAVA_HOME = "/opt/homebrew/Cellar/openjdk/22.0.2/libexec/openjdk.jdk/Contents/Home"
+        SHELL = "/bin/bash"
+        JAVA_HOME = "/opt/homebrew/Cellar/openjdk/22.0.2/libexec/openjdk.jdk/Contents/Home"  // Set Java home as per your system
+        DOCKER_IMAGE_TAG = "25"  // Change this tag to a new value for each build
     }
     stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
         stage('Test Shell Command') {
             steps {
                 sh '/bin/bash -c "echo Shell is working!"'
@@ -24,6 +21,15 @@ pipeline {
                 }
             }
         }
+        stage('Run SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {  // Ensure 'SonarQube' matches the SonarQube server configuration name in Jenkins
+                    dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
+                        sh 'mvn sonar:sonar'
+                    }
+                }
+            }
+        }
         stage('Test Docker') {
             steps {
                 script {
@@ -33,17 +39,36 @@ pipeline {
         }
         stage('Build and Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
                     script {
                         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-                            sh '''
-                                echo "Logging into Docker Hub..."
-                                echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
-                                echo "Building Docker image..."
-                                docker build -t $DOCKER_USERNAME/jenkins-app:23 .
-                                docker push $DOCKER_USERNAME/jenkins-app:23
-                            '''
+                            sh 'echo "Logging into Docker Hub..."'
+                            sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                            sh 'echo "Building Docker image..."'
+                            sh "docker build -t $DOCKER_USERNAME/jenkins-app:${DOCKER_IMAGE_TAG} ."  // Build the Docker image with the new tag
+                            sh "docker push $DOCKER_USERNAME/jenkins-app:${DOCKER_IMAGE_TAG}"  // Push the Docker image to Docker Hub
                         }
+                    }
+                }
+            }
+        }
+        stage('Update Image Tag in Deployment File') {
+            steps {
+                script {
+                    dir('k8s') {  // Ensure your deployment YAML file is in the 'k8s' directory
+                        sh """
+                        sed -i '' 's|image: .*|image: $DOCKER_USERNAME/jenkins-app:${DOCKER_IMAGE_TAG}|' deployment.yaml
+                        """
+                        sh 'cat deployment.yaml'  // Display the updated deployment file for confirmation
+                    }
+                }
+            }
+        }
+        stage('Deploy to Argo CD') {
+            steps {
+                script {
+                    dir('k8s') {  // Ensure your Argo CD application YAML file is in the 'k8s' directory
+                        sh 'kubectl apply -f argocd-application.yaml'  // Update Argo CD application with the new image tag
                     }
                 }
             }
@@ -52,9 +77,6 @@ pipeline {
     post {
         always {
             echo 'Pipeline finished. Check logs for details.'
-        }
-        failure {
-            echo 'Pipeline failed. Please check the logs for more details.'
         }
     }
 }
