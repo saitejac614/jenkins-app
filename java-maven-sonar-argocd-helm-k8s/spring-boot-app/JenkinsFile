@@ -59,7 +59,7 @@ pipeline {
                 GIT_REPO_NAME = "jenkins-app"
                 GIT_USER_NAME = "dhexavier"
             }
-      steps {
+    steps {
         withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
             sh '''
                 git config user.email "testpen008@gmail.com"
@@ -72,12 +72,14 @@ pipeline {
                 if [ -f java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml ]; then
                     git checkout --theirs java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                     git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                    git commit -m "Resolved merge conflict in deployment.yml using theirs strategy"
+                    git commit -m "Resolved merge conflict in deployment.yml using theirs strategy" || echo "Nothing to commit"
                 fi
                 
                 BUILD_NUMBER=${BUILD_NUMBER}
                 sed -i '' "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                
+                # Add and commit only tracked changes
+                git add -u
                 git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "Nothing to commit"
                 
                 git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
