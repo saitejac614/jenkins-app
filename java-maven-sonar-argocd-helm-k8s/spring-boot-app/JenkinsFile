@@ -46,8 +46,8 @@ pipeline {
                                 echo "Logging into Docker Hub..."
                                 echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
                                 echo "Building Docker image..."
-                                docker build -t $DOCKER_USERNAME/jenkins-app:23 .
-                                docker push $DOCKER_USERNAME/jenkins-app:23
+                                docker build -t $DOCKER_USERNAME/jenkins-app:${BUILD_NUMBER} .
+                                docker push $DOCKER_USERNAME/jenkins-app:${BUILD_NUMBER}
                             '''
                         }
                     }
@@ -59,29 +59,23 @@ pipeline {
                 GIT_REPO_NAME = "jenkins-app"
                 GIT_USER_NAME = "dhexavier"
             }
-       steps {
-        withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
-            sh '''
-                # Configure Git
-                git config user.email "testpen008@gmail.com"
-                git config user.name "Dhe Xavier"
-
-                # Checkout the main branch and pull the latest changes
-                git checkout main
-                git config pull.rebase false
-                git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main
-
-                # Update the deployment file with the new image tag
-                BUILD_NUMBER=${BUILD_NUMBER}
-                sed -i '' "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-
-                # Stage the changes and commit
-                git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "Nothing to commit"
-
-                # Push the changes to the main branch
-                git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-            '''
+            steps {
+                withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
+                    sh '''
+                        git config user.email "testpen008@gmail.com"
+                        git config user.name "Dhe Xavier"
+                        git checkout main
+                        git config pull.rebase false
+                        git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main
+                        
+                        # Update the deployment file with the new image tag
+                        sed -i '' "s|dhexavier1/jenkins-app:.*|dhexavier1/jenkins-app:${BUILD_NUMBER}|" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                        
+                        # Commit and push the updated deployment file
+                        git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                        git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main
+                    '''
                 }
             }
         }
