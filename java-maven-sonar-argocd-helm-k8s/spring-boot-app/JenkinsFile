@@ -59,29 +59,27 @@ pipeline {
                 GIT_REPO_NAME = "jenkins-app"
                 GIT_USER_NAME = "dhexavier"
             }
-    steps {
+       steps {
         withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
             sh '''
+                # Configure Git
                 git config user.email "testpen008@gmail.com"
                 git config user.name "Dhe Xavier"
-                git checkout main  # Ensure you are on the main branch
-                git config pull.rebase false  # Set git to use merge strategy by default
-                git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main || true  # Pull the latest changes with merge strategy
-                
-                # If there's a conflict, resolve it using "theirs" strategy
-                if [ -f java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml ]; then
-                    git checkout --theirs java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                    git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                    git commit -m "Resolved merge conflict in deployment.yml using theirs strategy" || echo "Nothing to commit"
-                fi
-                
+
+                # Checkout the main branch and pull the latest changes
+                git checkout main
+                git config pull.rebase false
+                git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main
+
+                # Update the deployment file with the new image tag
                 BUILD_NUMBER=${BUILD_NUMBER}
                 sed -i '' "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                
-                # Add and commit only tracked changes
-                git add -u
+
+                # Stage the changes and commit
+                git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                 git commit -m "Update deployment image to version ${BUILD_NUMBER}" || echo "Nothing to commit"
-                
+
+                # Push the changes to the main branch
                 git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
             '''
                 }
