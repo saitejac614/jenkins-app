@@ -46,8 +46,8 @@ pipeline {
                                 echo "Logging into Docker Hub..."
                                 echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
                                 echo "Building Docker image..."
-                                docker build -t $DOCKER_USERNAME/jenkins-app:${BUILD_NUMBER} .
-                                docker push $DOCKER_USERNAME/jenkins-app:${BUILD_NUMBER}
+                                docker build -t saitejac614/jenkins-app:${BUILD_NUMBER} .
+                                docker push saiteja614/jenkins-app:${BUILD_NUMBER}
                             '''
                         }
                     }
@@ -57,13 +57,13 @@ pipeline {
         stage('Update Deployment File') {
             environment {
                 GIT_REPO_NAME = "jenkins-app"
-                GIT_USER_NAME = "dhexavier"
+                GIT_USER_NAME = "saitejac614"
             }
             steps {
                 withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
                     sh '''
-                        git config user.email "testpen008@gmail.com"
-                        git config user.name "Dhe Xavier"
+                        git config user.email "cheemarlasaiteja.1999@gmail.com"
+                        git config user.name "saitejac614"
                         git checkout main
                         git config pull.rebase false
                         git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main
