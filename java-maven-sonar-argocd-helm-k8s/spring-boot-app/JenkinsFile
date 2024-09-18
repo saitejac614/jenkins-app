@@ -1,34 +1,33 @@
 pipeline {
     agent any
     environment {
-        PATH = "C:\\Program Files\\Java\\jdk-22.0.2\\bin;C:\\Program Files\\Git\\bin;$PATH"
-        JAVA_HOME = "C:\\Program Files\\Java\\jdk-22.0.2"
+        PATH = "/bin:/usr/bin:/usr/local/bin:$PATH"
+        JAVA_HOME = "/opt/homebrew/Cellar/openjdk/22.0.2/libexec/openjdk.jdk/Contents/Home"
     }
     stages {
-        stage('Test PowerShell Command') {
+        stage('Test Shell Command') {
             steps {
-                powershell 'Write-Output "PowerShell is working!"'
+                sh 'echo "Shell is working!"'
             }
         }
         stage('Build and Test') {
-    steps {
-        dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-            powershell '''
-                $ErrorActionPreference = "Stop"
-                Write-Output "Current PATH: $env:PATH"
-                Write-Output "JAVA_HOME is set to: $env:JAVA_HOME"
-                C:\Program Files\apache-maven-3.9.9\apache-maven\src\bin -Dmaven.repo.local=${env:WORKSPACE}\\.m2\\repository clean package
-            '''
+            steps {
+                dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
+                    powershell '''
+                        $ErrorActionPreference = "Stop"
+                        Write-Output "Current PATH: $env:PATH"
+                        Write-Output "JAVA_HOME is set to: $env:JAVA_HOME"
+                        "C:/Program Files/apache-maven-3.9.9/apache-maven/bin/mvn" -Dmaven.repo.local=${env:WORKSPACE}\\.m2\\repository clean package
+                    '''
+                }
+            }
         }
-    }
-}
-
         stage('Run SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-                            powershell 'mvn sonar:sonar -Dsonar.login=$env:SONAR_TOKEN'
+                            sh 'mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN'
                         }
                     }
                 }
@@ -37,7 +36,7 @@ pipeline {
         stage('Test Docker') {
             steps {
                 script {
-                    powershell 'docker run hello-world'
+                    sh 'docker run hello-world'
                 }
             }
         }
@@ -46,13 +45,13 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
                     script {
                         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-                            powershell '''
-                                $ErrorActionPreference = "Stop"
-                                Write-Output "Logging into Docker Hub..."
-                                $env:DOCKER_PASSWORD | docker login -u $env:DOCKER_USERNAME --password-stdin
-                                Write-Output "Building Docker image..."
-                                docker build -t saitejac614/jenkins-app:$env:BUILD_NUMBER .
-                                docker push saitejac614/jenkins-app:$env:BUILD_NUMBER
+                            sh '''
+                                set -e
+                                echo "Logging into Docker Hub..."
+                                echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+                                echo "Building Docker image..."
+                                docker build -t saitejac614/jenkins-app:${BUILD_NUMBER} .
+                                docker push saitejac614/jenkins-app:${BUILD_NUMBER}
                             '''
                         }
                     }
@@ -66,21 +65,21 @@ pipeline {
             }
             steps {
                 withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
-                    powershell '''
-                        $ErrorActionPreference = "Stop"
+                    sh '''
+                        set -e
                         git config user.email "cheemarlasaiteja.1999@gmail.com"
                         git config user.name "saitejac614"
                         git checkout main
                         git config pull.rebase false
-                        git pull https://$env:GITHUB_TOKEN@github.com/$env:GIT_USER_NAME/$env:GIT_REPO_NAME main
+                        git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main
                         
                         # Update the deployment file with the new image tag
-                        (Get-Content java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml) -replace 'saitejac614/jenkins-app:.*', "saitejac614/jenkins-app:$env:BUILD_NUMBER" | Set-Content java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                        sed -i '' "s|saitejac614/jenkins-app:.*|saitejac614/jenkins-app:${BUILD_NUMBER}|" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                         
                         # Commit and push the updated deployment file
                         git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
-                        git commit -m "Update deployment image to version $env:BUILD_NUMBER"
-                        git push https://$env:GITHUB_TOKEN@github.com/$env:GIT_USER_NAME/$env:GIT_REPO_NAME main
+                        git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                        git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main
                     '''
                 }
             }
