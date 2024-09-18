@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        PATH = "C:\\Program Files\\Java\\jdk-22\\bin;C:\\Program Files\\Maven\\bin;C:\\Windows\\System32;${env.PATH}"
+        PATH = "C:\\Program Files\\Java\\jdk-22\\bin;C:\\Program Files\\apache-maven-3.9.9\\bin;C:\\Windows\\System32;${env.PATH}"
         JAVA_HOME = "C:\\Program Files\\Java\\jdk-22"
     }
     stages {
@@ -17,7 +17,7 @@ pipeline {
                         $ErrorActionPreference = "Stop"
                         Write-Output "Current PATH: $env:PATH"
                         Write-Output "JAVA_HOME is set to: $env:JAVA_HOME"
-                        "C:\\Program Files\\apache-maven-3.9.9\\bin\\mvn.cmd" -Dmaven.repo.local=${env.WORKSPACE}\\.m2\\repository clean package
+                        & "C:\\Program Files\\apache-maven-3.9.9\\bin\\mvn.cmd" -Dmaven.repo.local=$env:WORKSPACE\\.m2\\repository clean package
                     '''
                 }
             }
