@@ -11,17 +11,18 @@ pipeline {
             }
         }
         stage('Build and Test') {
-            steps {
-                dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-                    powershell '''
-                        $ErrorActionPreference = "Stop"
-                        Write-Output "Current PATH: $env:PATH"
-                        Write-Output "JAVA_HOME is set to: $env:JAVA_HOME"
-                        mvn -Dmaven.repo.local=${env:WORKSPACE}\\.m2\\repository clean package
-                    '''
-                }
-            }
+    steps {
+        dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
+            powershell '''
+                $ErrorActionPreference = "Stop"
+                Write-Output "Current PATH: $env:PATH"
+                Write-Output "JAVA_HOME is set to: $env:JAVA_HOME"
+                C:\Program Files\apache-maven-3.9.9\apache-maven\src\bin -Dmaven.repo.local=${env:WORKSPACE}\\.m2\\repository clean package
+            '''
         }
+    }
+}
+
         stage('Run SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
