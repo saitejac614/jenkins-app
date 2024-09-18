@@ -7,15 +7,18 @@ pipeline {
     stages {
         stage('Test Shell Command') {
             steps {
-                sh '/bin/bash -c "echo Shell is working!"'
+                sh 'echo "Shell is working!"'
             }
         }
         stage('Build and Test') {
             steps {
                 dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
-                    sh 'echo "Current PATH: $PATH"'
-                    sh 'echo "JAVA_HOME is set to: $JAVA_HOME"'
-                    sh 'mvn -Dmaven.repo.local=${WORKSPACE}/.m2/repository clean package'
+                    sh '''
+                        set -e
+                        echo "Current PATH: $PATH"
+                        echo "JAVA_HOME is set to: $JAVA_HOME"
+                        mvn -Dmaven.repo.local=${WORKSPACE}/.m2/repository clean package
+                    '''
                 }
             }
         }
@@ -43,6 +46,7 @@ pipeline {
                     script {
                         dir('java-maven-sonar-argocd-helm-k8s/spring-boot-app') {
                             sh '''
+                                set -e
                                 echo "Logging into Docker Hub..."
                                 echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
                                 echo "Building Docker image..."
@@ -62,6 +66,7 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
                     sh '''
+                        set -e
                         git config user.email "cheemarlasaiteja.1999@gmail.com"
                         git config user.name "saitejac614"
                         git checkout main
