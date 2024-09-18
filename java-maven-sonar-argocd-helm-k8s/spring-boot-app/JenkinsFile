@@ -46,8 +46,8 @@ pipeline {
                                 echo "Logging into Docker Hub..."
                                 echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
                                 echo "Building Docker image..."
-                                docker build -t $DOCKER_USERNAME/jenkins-app:${BUILD_NUMBER} .
-                                docker push $DOCKER_USERNAME/jenkins-app:${BUILD_NUMBER}
+                                docker build -t saitejac614/jenkins-app:${BUILD_NUMBER} .
+                                docker push saitejac614/jenkins-app:${BUILD_NUMBER}
                             '''
                         }
                     }
@@ -57,19 +57,19 @@ pipeline {
         stage('Update Deployment File') {
             environment {
                 GIT_REPO_NAME = "jenkins-app"
-                GIT_USER_NAME = "dhexavier"
+                GIT_USER_NAME = "saitejac614"
             }
             steps {
                 withCredentials([string(credentialsId: 'github-cred', variable: 'GITHUB_TOKEN')]) {
                     sh '''
                         git config user.email "testpen008@gmail.com"
-                        git config user.name "Dhe Xavier"
+                        git config user.name "Saiteja"
                         git checkout main
                         git config pull.rebase false
                         git pull https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} main
                         
                         # Update the deployment file with the new image tag
-                        sed -i '' "s|dhexavier1/jenkins-app:.*|dhexavier1/jenkins-app:${BUILD_NUMBER}|" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                        sed -i '' "s|saitejac614/jenkins-app:.*|saitejac614/jenkins-app:${BUILD_NUMBER}|" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                         
                         # Commit and push the updated deployment file
                         git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
